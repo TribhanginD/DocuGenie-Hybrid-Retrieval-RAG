@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"path": "../RealTimeMLPipeline"
+		},
+		{
+			"path": "../devops-copilot"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../order-processing-system"
+		},
+		{
+			"path": "../observability-stack"
+		},
+		{
+			"path": "../incident-command-center"
+		},
+		{
+			"path": "../My-portfolio"
+		}
+	]
+}

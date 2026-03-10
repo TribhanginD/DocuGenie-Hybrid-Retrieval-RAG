@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from prometheus_client import make_asgi_app
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from core import RAGEngine
 from providers.vector_db import QdrantProvider
@@ -32,9 +32,6 @@ app = FastAPI(
     version="2.0.0"
 )
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to DocuGenie - AI Platform Orchestrator is ACTIVE"}
 
 # Enable CORS for React development
 app.add_middleware(
@@ -60,10 +57,7 @@ async def platform_governance_check(content: str) -> bool:
                     logger.warning(f"ML Pipeline BLOCKED ingestion: {result['reason']}")
                     return False
     except Exception as e:
-        logger.warning(f"Governance Delegation failed: {e}. Falling back to local scanner.")
-        from governance import ComplianceScanner
-        local_result = ComplianceScanner.scan_content(content)
-        return local_result["status"] != "FLAGGED"
+        logger.warning(f"Governance Delegation failed: {e}. Proceeding with caution (No local scanner).")
     return True
 
 async def platform_reliable_ingest(task_id: str, doc_name: str) -> bool:
@@ -78,8 +72,7 @@ async def platform_reliable_ingest(task_id: str, doc_name: str) -> bool:
         return True # Fallback: let DocuGenie handle it locally
 
 # Add Prometheus metrics endpoint
-metrics_app = make_asgi_app()
-app.mount("/metrics", metrics_app)
+Instrumentator().instrument(app).expose(app)
 
 # Initialize global state
 _state: Dict[str, Any] = {
@@ -325,8 +318,10 @@ if os.path.exists("./frontend/dist"):
     @app.exception_handler(404)
     async def custom_404_handler(request, __):
         # Direct all unknown requests to index.html for React Router
-        if not request.url.path.startswith("/query") and not request.url.path.startswith("/metrics"):
-            return FileResponse("./frontend/dist/index.html")
+        api_prefixes = ["/query", "/ingest", "/health", "/metrics"]
+        if not any(request.url.path.startswith(p) for p in api_prefixes):
+            if os.path.exists("./frontend/dist/index.html"):
+                return FileResponse("./frontend/dist/index.html")
         raise HTTPException(status_code=404, detail="Not Found")
 
 if __name__ == "__main__":

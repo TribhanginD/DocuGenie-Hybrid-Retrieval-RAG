@@ -3,6 +3,7 @@ uvicorn
 python-multipart
 pydantic
 prometheus_client
+prometheus-fastapi-instrumentator==7.0.0
 pypdf
 pdfplumber
 groq
